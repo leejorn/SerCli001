@@ -26,7 +26,10 @@ def add_sock_cmd(sock, cmd, args):
     mpSockCmd[sock]["send_cmds"].append((cmd, args))
     cmdLock.release()
 
-def process_socket():
+def process_send():
+    pass
+
+def process_recv():
     global lsConnSock, lsReadSock, lsWriteSock, lsErrorSock
     lsConnSock = []
     lsReadSock = []
@@ -101,15 +104,18 @@ def process_db():
 
 def main():
 
-    process_socket()
-
+    recv_threading = threading.Thread(target = process_recv, args = ([]))
+    send_threading = threading.Thread(target = process_send, args = ([]))
     rpc_threading = threading.Thread(target = process_rpc, args = ([]))
-
     db_threading = threading.Thread(target = process_db, args = ([]))
 
+    recv_threading.start()
+    send_threading.start()
     rpc_threading.start()
     db_threading.start()
 
+    recv_threading.join()
+    send_threading.join()
     rpc_threading.join()
     db_threading.join()
 
