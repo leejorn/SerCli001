@@ -17,7 +17,7 @@ def process_recv():
         lsReadSock.append(conn_sock)
 
         for usernum, mpInfo in mpOnlineUser.iteritems():
-            if mpInfo["st"] == ST_WAIT_OFFLINE:
+            if mpInfo["st"] == ST_OFFLINE:
                 continue
 
             sock = mpInfo["sock"]
@@ -29,7 +29,7 @@ def process_recv():
         for sock in rlist:
             if sock == conn_sock:
                 newsock, addr = sock.accept()
-                add_new_sock(newsock, addr)
+                new_connect_socket(newsock, addr)
             else:
                 sdata = ""
                 while True:

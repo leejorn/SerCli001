@@ -10,8 +10,8 @@ def process_send():
         lsWriteSock = []
         lsErrorSock = []
 
-        for usernum, mpInfo in mpOnlineUser.iteritems():
-            if mpInfo["st"] = ST_WAIT_OFFLINE:
+        for sock, mpInfo in mpAllSock.iteritems():
+            if mpInfo["st"] = ST_OFFLINE:
                 continue
 
             if mpInfo["sendmsg"] = '':
