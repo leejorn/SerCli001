@@ -10,16 +10,18 @@ def process_send():
         lsWriteSock = []
         lsErrorSock = []
 
-        for sock, mpInfo in mpAllSock.iteritems():
+        socketLock.acquire()
+        for sock, mpInfo in mpSockBaseinfo.iteritems():
             if mpInfo["st"] = ST_OFFLINE:
                 continue
 
-            if mpInfo["sendmsg"] = '':
+            if not has_msg_to_send(sock):
                 continue
 
             sock = mpInfo["sock"]
             lsWriteSock.append(sock)
             lsErrorSock.append(sock)
+        socketLock.release()
 
         if len(lsWriteSock) == 0:
             continue

@@ -9,16 +9,13 @@ from data import *
 global sock
 
 def main():
-    recv_thread = threading.Thread(target = process_recv, args = ([]))
-    send_thread = threading.Thread(target = process_send, args = ([]))
+    socket_thread = threading.Thread(target = process_socket, args = ([]))
     input_thread = threading.Thread(target = process_input, args = ([]))
 
-    recv_thread.start()
-    send_thread.start()
+    socket_thread.start()
     input_thread.start()
 
-    recv_thread.join()
-    send_thread.join()
+    socket_thread.join()
     input_thread.join()
 
     sys.exit(1)
@@ -32,44 +29,22 @@ def process_input():
 
     return
 
-def process_send():
-    while True:
-        time.sleep(0.2)
-
-        if not sock:
-            continue
-
-        msg = pop_msg_to_send()
-        if len(msg) == 0:
-            continue
-
-        lsWriteSock = [ sock, ]
-        lsErrorSock = [ sock, ] 
-        rlist, wlist, xlist = select.select([], lsWriteSock, lsErrorSock, 0)
-
-        for wsock in wlist:
-            if wsock != sock:
-                print "there is a unknown sock be writed: ", sock, wsock
-                continue
-
-            try:
-                wsock.send(msg)
-            except socket.error as e:
-                print "Error socket send e=%s"%e
-                continue
-
-    return
-
-def process_recv():
+def process_socket():
     global sock
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.setblocking(0)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     sock.connect( ('', 10011) )
 
     while True:
-        lsReadSock = [ sock, ]
-        lsErrorSock = [ sock, ] 
+        lsReadSock = []
+        lsWriteSock = []
+        lsErrorSock = []
 
-        rlist, wlist, xlist = select.select(lsReadSock, [], lsErrorSock, 0)
+        lsReadSock.append(sock)
+        lsErrorSock.append(sock)
+
+        rlist, wlist, xlist = select.select(lsReadSock, [], lsErrorSock, 0.2)
 
         for rsock in rlist:
             if rsock != sock:
@@ -89,8 +64,23 @@ def process_recv():
 
             if len(sdata) == 0:
                 continue
-            push_msg_from_recv(msg)
-            print "recv from remote msg is : ", msg
+            push_msg_from_recv(sdata)
+            print "recv from remote msg is : ", sdata
+
+        for wsock in wlist:
+            if wsock != sock:
+                print "there is a unknown sock be writed: ", sock, wsock
+                continue
+
+            msg = pop_msg_to_send(msg)
+            if len(msg) == 0:
+                continue
+
+            try:
+                wsock.send(msg)
+            except socket.error as e:
+                print "Error socket send e=%s"%e
+                continue
 
         for xsock in xlist:
             pass

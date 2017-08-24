@@ -26,15 +26,9 @@ def add_sock_cmd(sock, cmd, args):
     mpSockCmd[sock]["send_cmds"].append((cmd, args))
     cmdLock.release()
 
-def process_send():
-    pass
-
-def process_recv():
+def process_socket():
     global lsConnSock, lsReadSock, lsWriteSock, lsErrorSock
     lsConnSock = []
-    lsReadSock = []
-    lsWriteSock = []
-    lsErrorSock = []
     mpSockCmd = {}
 
     conn_sock1 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -45,56 +39,60 @@ def process_recv():
 
     lsConnSock.append(conn_sock1)
 
-    lsReadSock.append(conn_sock1)
-
     print "bind sock is : ", conn_sock1
 
-    while 1:
-        rlist, wlist, xlist = select.select(lsReadSock, lsWriteSock, lsErrorSock, 0)
+    while True:
+        lsReadSock = []
+        lsWriteSock = []
+        lsErrorSock = []
 
-        if rlist:
-            print "rlist select : ", rlist, wlist, xlist
+        lsReadSock.append(conn_sock1)
+        lsErrorSock.append(conn_sock1)
 
-        if wlist:
-            print "wlist select : ", rlist, wlist, xlist
+        for sock, mpinfo in mpSockCmd.iteritems():
+            if len(mpinfo["send_cmds"]) > 0:
+                lsWriteSock.append(sock)
+            lsReadSock.append(sock)
+            lsErrorSock.append(sock)
+
+        rlist, wlist, xlist = select.select(lsReadSock, lsWriteSock, lsErrorSock, 0.1)
 
         for sock in rlist:
             if sock in lsConnSock:
                 conn, addr = sock.accept()
                 conn.setblocking(0)
                 conn.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                mpSockCmd.setdefault(conn, {"msg" : ["Welcome to this ChatRoom!!\n",], "addr": addr})
-                lsReadSock.append(conn)
-                lsWriteSock.append(conn)
-                print "accept sock is : ", conn
+                mpSockCmd.setdefault(conn, {"send_cmds" : ["Welcome to this ChatRoom!!\n",], "addr": addr})
+                print "accept connect socket[%s] addr[%s] "%(conn, addr)
             else:
                 try:
                     sdata = sock.recv(1024)
                 except socket.error as e:
                     print "Error recv data. [%s]"%e
                     continue
-                    
-                mpSockCmd[sock]["msg"].append(sdata)
-                print "receive sdata = ", sdata
 
-                if sock not in lsWriteSock:
-                    lsWriteSock.append(sock)
+                if len(sdata) == 0:
+                    continue
+                    
+                mpSockCmd[sock]["send_cmds"].append(sdata)
+                print "recv socket[%s] msg[%s] "%(sock, sdata)
 
         for sock in wlist:
-            while len(mpSockCmd[sock]["msg"]) > 0:
-                msg = mpSockCmd[sock]["msg"][0]
-                mpSockCmd[sock]["msg"] = mpSockCmd[sock]["msg"][1:]
-                print "send msg : %s\n"%msg
-                try:
-                    sock.send("[%s] we recv your words [%s]\n"%(time.strftime("%Y-%m-%d %H:%M:%S"), msg))
-                except socket.error as e:
-                    print "Error send data. [%s]"%e
-                    sock.close()
-                    if sock in lsReadSock:
-                        lsReadSock.remove(sock)
-            lsWriteSock.remove(sock)
+            if len(mpSockCmd[sock]["send_cmds"]) == 0:
+                continue
+
+            msg = mpSockCmd[sock]["send_cmds"][0]
+            mpSockCmd[sock]["send_cmds"] = mpSockCmd[sock]["send_cmds"][1:]
+            try:
+                sock.send("[%s] we recv your words [%s]\n"%(time.strftime("%Y-%m-%d %H:%M:%S"), msg))
+                print "send socket[%s] msg[%s]"%(sock, msg)
+            except socket.error as e:
+                print "Error send data. [%s]"%e
+                sock.close()
+                mpSockCmd.pop(sock)
 
     conn_sock1.close()
+    return
 
 def process_rpc():
     pass
@@ -104,18 +102,15 @@ def process_db():
 
 def main():
 
-    recv_threading = threading.Thread(target = process_recv, args = ([]))
-    send_threading = threading.Thread(target = process_send, args = ([]))
+    socket_threading = threading.Thread(target = process_socket, args = ([]))
     rpc_threading = threading.Thread(target = process_rpc, args = ([]))
     db_threading = threading.Thread(target = process_db, args = ([]))
 
-    recv_threading.start()
-    send_threading.start()
+    socket_threading.start()
     rpc_threading.start()
     db_threading.start()
 
-    recv_threading.join()
-    send_threading.join()
+    socket_threading.join()
     rpc_threading.join()
     db_threading.join()
 

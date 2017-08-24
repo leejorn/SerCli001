@@ -16,13 +16,15 @@ def process_recv():
 
         lsReadSock.append(conn_sock)
 
-        for usernum, mpInfo in mpOnlineUser.iteritems():
+        socketLock.acquire()
+        for sock, mpInfo in mpSockBaseinfo.iteritems():
             if mpInfo["st"] == ST_OFFLINE:
                 continue
 
             sock = mpInfo["sock"]
             lsReadSock.append(sock)
             lsErrorSock.append(sock)
+        socketLock.release()
 
         rlist, wlist, xlist = select.select(lsReadSock, [], lsErrorSock, 0)
 
