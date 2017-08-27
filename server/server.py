@@ -10,7 +10,7 @@ mpSockCmd = {}
 cmdLock = threading.Lock()
 
 def init_sock_cmd(sock):
-    cmdLock.require()
+    cmdLock.acquire()
     mpSockCmd.setdefault(sock, {})
     mpSockCmd[sock] = {
             "recv_buff" : "",
@@ -22,7 +22,7 @@ def init_sock_cmd(sock):
     cmdLock.release()
 
 def add_sock_cmd(sock, cmd, args):
-    cmdLock.require()
+    cmdLock.acquire()
     mpSockCmd[sock]["send_cmds"].append((cmd, args))
     cmdLock.release()
 
@@ -44,11 +44,16 @@ def process_socket():
 
     lsReadSock.append(conn_sock1)
 
+    print "bind sock is : ", conn_sock1
+
     while 1:
         rlist, wlist, xlist = select.select(lsReadSock, lsWriteSock, lsErrorSock, 0)
 
         if rlist:
-            print "select : ", rlist, wlist, xlist
+            print "rlist select : ", rlist, wlist, xlist
+
+        if wlist:
+            print "wlist select : ", rlist, wlist, xlist
 
         for sock in rlist:
             if sock in lsConnSock:
@@ -58,6 +63,7 @@ def process_socket():
                 mpSockCmd.setdefault(conn, {"msg" : ["Welcome to this ChatRoom!!\n",], "addr": addr})
                 lsReadSock.append(conn)
                 lsWriteSock.append(conn)
+                print "accept sock is : ", conn
             else:
                 try:
                     sdata = sock.recv(1024)
@@ -80,7 +86,9 @@ def process_socket():
                     sock.send("[%s] we recv your words [%s]\n"%(time.strftime("%Y-%m-%d %H:%M:%S"), msg))
                 except socket.error as e:
                     print "Error send data. [%s]"%e
-                    continue
+                    sock.close()
+                    if sock in lsReadSock:
+                        lsReadSock.remove(sock)
             lsWriteSock.remove(sock)
 
     conn_sock1.close()

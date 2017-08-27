@@ -3,20 +3,21 @@
 #
 #
 #####################################################################
-import threading, socket, select, sys
+import threading, socket, select, sys, time
 from data import *
 
 def main():
-    process_socket()
+    socket_thread = threading.Thread(target = process_socket, args = ([]))
+    input_thread = threading.Thread(target = process_input, args = ([]))
 
-    input_thread = Thread.threading(target = process_input, args = ([]))
-
+    socket_thread.start()
     input_thread.start()
+
+    socket_thread.join()
     input_thread.join()
 
     sys.exit(1)
     
-
 def process_input():
     print "[%s] start threading for input ...\n"%time.strftime("%Y-%m-%d %H:%M:%S")
 
@@ -36,9 +37,9 @@ def process_socket():
         lsErrorSock = [] 
 
         lsReadSock.append(sock)
-
-        if len(lsSendMsg) > 0:
-            lsWriteSock.append(sock)
+        
+        #whatever we need to write the sock, we shelled append the sock to lsWriteSock
+        lsWriteSock.append(sock)
 
         rlist, wlist, xlist = select.select(lsReadSock, lsWriteSock, lsErrorSock, 0)
 
@@ -54,16 +55,18 @@ def process_socket():
                 except socket.error as e:
                     print "Error socket recv e=%s"%e
                     break
+                if len(srecv) == 0:
+                    break
                 sdata += srecv
             print "recv is : %s"%sdata
 
             push_msg_from_recv(msg)
 
-        for wsock in rlist:
+        for wsock in wlist:
             if wsock != sock:
                 continue
 
-            msg = pop_msg_from_recv()
+            msg = pop_msg_to_send()
             if len(msg):
                 continue
             try:
