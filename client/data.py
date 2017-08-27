@@ -4,8 +4,8 @@ import threading
 sendMsgLock = threading.Lock()
 recvMsgLock = threading.Lock()
 
-lsSendMsg = []   #需要往服务端传递的消息
-lsRecvMsg = []   #从服务端读取出来的消息
+lsSendMsg = [] 
+lsRecvMsg = []
 
 def push_msg_to_send(msg):
     sendMsgLock.require()
