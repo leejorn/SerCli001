@@ -4,10 +4,11 @@ import socket
 from data import *
 
 def process_recv():
-    conn_sock = socket.socket(socket.ANET_INET, socket.STREAM)
-    conn_sock.setopt(socket.NOBLOCK)
-    conn_sock.bind(5)
-    conn_sock.listen()
+    conn_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    conn_sock.setblocking(0)
+    conn_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    conn_sock.bind(("", 10011))
+    conn_sock.listen(5)
 
     while True:
         lsReadSock = []
@@ -27,7 +28,8 @@ def process_recv():
 
         for sock in rlist:
             if sock == conn_sock:
-                pass
+                newsock, addr = sock.accept()
+                add_new_sock(newsock, addr)
             else:
                 sdata = ""
                 while True:

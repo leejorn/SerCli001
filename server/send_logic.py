@@ -27,4 +27,15 @@ def process_send():
         rlist, wlist, xlist = select.select([], lsWriteSock, lsErrorSock, 0)
 
         for sock in wlist:
+            msg = pop_msg_to_send(sock)
+            if len(msg) == 0:
+                continue
+
+            try:
+                sock.send(msg)
+            except socket.error as e:
+                print "sock[%s] send msg error: ", e
+                continue
+
+        for sock in xlist:
             pass
