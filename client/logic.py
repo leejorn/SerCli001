@@ -3,7 +3,7 @@
 #
 #
 #####################################################################
-import threading, socket, select, sys, time
+import threading, socket, select, sys, time, errno
 from data import *
 
 global sock
@@ -24,8 +24,13 @@ def process_input():
     print "[%s] start threading for input ...\n"%time.strftime("%Y-%m-%d %H:%M:%S")
 
     while 1:
-        msg = raw_input()
-        push_msg_to_send(msg)
+        try:
+            msg = raw_input()
+            push_msg_to_send(msg)
+        except EOFError:
+            #when we get EOFError, we shell finish this program
+            set_shutdown()
+            break
 
     return
 
@@ -37,6 +42,11 @@ def process_socket():
     sock.connect( ('', 10011) )
 
     while True:
+        #check is now shutdown??
+        if get_shutdown():
+            sock.close()
+            break
+
         lsReadSock = []
         lsWriteSock = []
         lsErrorSock = []
@@ -44,7 +54,10 @@ def process_socket():
         lsReadSock.append(sock)
         lsErrorSock.append(sock)
 
-        rlist, wlist, xlist = select.select(lsReadSock, [], lsErrorSock, 0.2)
+        if has_msg_to_send():
+            lsWriteSock.append(sock)
+
+        rlist, wlist, xlist = select.select(lsReadSock, lsWriteSock, lsErrorSock, 0.1)
 
         for rsock in rlist:
             if rsock != sock:
@@ -56,8 +69,12 @@ def process_socket():
                 try:
                     srecv = rsock.recv(1024)
                 except socket.error as e:
-                    print "Error socket recv e=%s"%e
-                    break
+                    if e[0] == errno.EAGAIN:
+                        break
+                    else:
+                        print "errno = ", e[0]
+                        print "Error socket recv e=%s"%e
+                        break
                 if len(srecv) == 0:
                     break
                 sdata += srecv
@@ -72,7 +89,7 @@ def process_socket():
                 print "there is a unknown sock be writed: ", sock, wsock
                 continue
 
-            msg = pop_msg_to_send(msg)
+            msg = pop_msg_to_send()
             if len(msg) == 0:
                 continue
 
