@@ -1,12 +1,15 @@
 # -*- coding: utf-8 -*-
 import threading
 
+global iUserLogin
 global iShutdown
 global sendMsgLock
 global recvMsgLock
 global lsSendMsg
 global lsRecvMsg
 
+CLIENT_ST_NO_LOGIN = 0
+CLIENT_ST_LOGIN = 1
 
 sendMsgLock = threading.Lock()
 recvMsgLock = threading.Lock()
@@ -15,6 +18,15 @@ lsSendMsg = []
 lsRecvMsg = []
 
 iShutdown = 0
+iUserLogin = CLIENT_ST_NO_LOGIN
+
+def set_st_login():
+    global iUserLogin
+    iUserLogin = CLIENT_ST_LOGIN
+
+def get_st_login():
+    global iUserLogin
+    return iUserLogin
 
 def set_shutdown():
     global iShutdown

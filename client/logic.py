@@ -19,19 +19,41 @@ def main():
     input_thread.join()
 
     sys.exit(1)
+
+def show_cmds_help():
+    pass
     
 def process_input():
     print "[%s] start threading for input ...\n"%time.strftime("%Y-%m-%d %H:%M:%S")
 
-    while 1:
+    while True:
         try:
-            msg = raw_input()
-            push_msg_to_send(msg)
+            st = get_st_login()
+            if st == CLIENT_ST_NO_LOGIN: #not login
+                msg = raw_input("Do you have registed account??(Y/N)\n>> ")
+                if msg == "N":
+                    print "Please regist a account first!\n"
+                    name = raw_input("Please enter you name:\n>>")
+                    passwd = raw_input("Please enter you passwd:\n>>")
+                    msg = "REG %s %s"%(name, passwd)
+                    push_msg_to_send(msg)
+                elif msg == "Y":
+                    name = raw_input("Please enter you name:\n>>")
+                    passwd = raw_input("Please enter you passwd:\n>>")
+                    msg = "ETR %s %s"%(name, passwd)
+                    push_msg_to_send(msg)
+            elif st == CLIENT_ST_LOGIN: #has login
+                msg = raw_input("YOU TALK[you words][help]\n>>")
+                if msg == "help":
+                    show_cmds_help()
+                    continue
+                elif len(msg) == 0 or msg == "\n":
+                    continue
+                push_msg_to_send(msg)
         except EOFError:
             #when we get EOFError, we shell finish this program
             set_shutdown()
             break
-
     return
 
 def process_socket():
